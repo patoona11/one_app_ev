@@ -270,9 +270,13 @@ app.get('/api/admin/logs', verifyToken, requireRole(['admin', 'moderator']), (re
 
 // Start server
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
-    console.log(`⚡ [App_EV Thailand] Backend API Service Layer running cleanly on port ${PORT}`);
-  });
+  // Start Server if not imported by Vercel Serverless Function
+  const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_VERSION);
+  if (!isServerless) {
+    app.listen(PORT, () => {
+      console.log(`🚀 App_EV Thailand API Server running on http://localhost:${PORT}`);
+    });
+  }
 }
 
 export default app;

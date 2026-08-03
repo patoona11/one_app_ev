@@ -46,15 +46,21 @@ out center tags;
     // Clean Provider Name matching known Thailand providers or keeping exact tag value
     let provider = rawProvider;
     const pUpper = rawProvider.toUpperCase();
-    if (pUpper.includes('PTT') || pUpper.includes('PLUZ')) provider = 'PTT EV Station PluZ';
-    else if (pUpper.includes('PEA') || pUpper.includes('VOLTA')) provider = 'PEA VOLTA';
-    else if (pUpper.includes('EA ANYWHERE')) provider = 'EA Anywhere';
-    else if (pUpper.includes('ELEXA') || pUpper.includes('EGAT')) provider = 'EleXA by EGAT';
-    else if (pUpper.includes('EVOLT')) provider = 'Evolt';
+    if (pUpper.includes('PTT') || pUpper.includes('PLUZ') || pUpper === 'EV STATION' || pUpper === 'OR') provider = 'PTT EV Station PluZ';
+    else if (pUpper.includes('PEA') || pUpper.includes('VOLTA') || pUpper.includes('PROVINCIAL ELECTRICITY')) provider = 'PEA VOLTA';
+    else if (pUpper.includes('EA ') || pUpper.includes('EA ANYWHERE') || pUpper === 'EA' || pUpper === 'E ANYWHERE') provider = 'EA Anywhere';
+    else if (pUpper.includes('ELEX') || pUpper.includes('EGAT')) provider = 'EleXA by EGAT';
+    else if (pUpper.includes('EVOLT') || pUpper.includes('EOSVOLT')) provider = 'Evolt';
     else if (pUpper.includes('MG')) provider = 'MG Super Charge';
     else if (pUpper.includes('TESLA')) provider = 'Tesla Supercharger';
     else if (pUpper.includes('SHELL')) provider = 'Shell Recharge';
-    else if (pUpper.includes('BANGCHAK')) provider = 'Bangchak';
+    else if (pUpper.includes('ON-ION') || pUpper.includes('ONION')) provider = 'On-ion (OR)';
+    else if (pUpper.includes('GINKA')) provider = 'Ginka EV';
+    else if (pUpper.includes('BYD') || pUpper.includes('REVER') || pUpper.includes('REVERT')) provider = 'BYD / Rêver Automotive';
+    else if (pUpper.includes('SPARK')) provider = 'Spark EV';
+    else if (pUpper.includes('MEA') || pUpper.includes('METROPOLITAN')) provider = 'MEA EV';
+    else if (pUpper.includes('CHARGE+')) provider = 'Charge+';
+    else if (pUpper.includes('ALTERVIM')) provider = 'Altervim SuperCharge';
 
     // Read connector types exclusively from relevant OSM tags
     const connectors = [];

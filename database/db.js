@@ -6,7 +6,10 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const dbPath = process.env.DATABASE_URL ? process.env.DATABASE_URL.replace('./', '') : 'database/ev_thailand.db';
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true' || Boolean(process.env.AWS_LAMBDA_FUNCTION_VERSION);
+const dbPath = isVercel 
+  ? '/tmp/ev_thailand.db' 
+  : (process.env.DATABASE_URL ? process.env.DATABASE_URL.replace('./', '') : 'database/ev_thailand.db');
 const dbDir = path.dirname(dbPath);
 
 if (!fs.existsSync(dbDir)) {
@@ -14,6 +17,7 @@ if (!fs.existsSync(dbDir)) {
 }
 
 const db = new Database(dbPath);
+
 
 // Enable foreign keys and WAL mode for higher read/write concurrency
 db.pragma('journal_mode = WAL');
