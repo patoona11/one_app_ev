@@ -1,13 +1,31 @@
 <!doctype html>
-<html lang="en">
+<html lang="th">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PlugPayGo - ค้นหา คำนวณ จ่าย ครบจบทุกทริป EV</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#10b981" />
+    <meta name="description" content="App_EV Thailand - แพลตฟอร์มเดินทางด้วยรถยนต์ไฟฟ้า ครบวงจร ค้นหาสถานีชาร์จจริง วางแผนทริปอิจฉริยะ พร้อมการเช็กสภาพโดยชุมชน" />
+    <link rel="manifest" href="/manifest.json" />
+    
+    <title>App_EV Thailand — แพลตฟอร์มเดินทางด้วยรถยนต์ไฟฟ้า ครบวงจร</title>
+
+    <!-- Leaflet & MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
   </head>
-  <body>
+  <body class="bg-gray-50 text-gray-900 transition-colors duration-200">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch((err) => {
+            console.log('SW Registration failed: ', err);
+          });
+        });
+      }
+    </script>
   </body>
 </html>

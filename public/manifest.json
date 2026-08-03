@@ -1,0 +1,17 @@
+{
+  "name": "App_EV Thailand - แพลตฟอร์มเดินทางด้วยรถยนต์ไฟฟ้า",
+  "short_name": "App_EV Thailand",
+  "description": "ค้นหาจุดชาร์จ EV จากข้อมูลจริง OpenStreetMap พร้อมระบบคำนวณเส้นทาง Smart Trip Planner และการมีส่วนร่วมของชุมชน",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

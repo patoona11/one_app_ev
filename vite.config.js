@@ -5,8 +5,13 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    port: 5173,
     proxy: {
-      // All requests to /overpass will be proxied to Overpass API (no CORS issue)
+      // Proxy all /api requests to our custom production Express backend service layer
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
       '/overpass': {
         target: 'https://overpass-api.de',
         changeOrigin: true,
@@ -15,4 +20,3 @@ export default defineConfig({
     },
   },
 })
-
