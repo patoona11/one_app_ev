@@ -20,97 +20,96 @@ function App() {
   const [realStations, setRealStations] = useState([]);
   const [isFetchingReal, setIsFetchingReal] = useState(false);
 
-  // Fetch Real Stations from OpenChargeMap API (Whole Country)
+  // Fetch Real Stations from OpenStreetMap Overpass API via Vite Proxy (no CORS!)
   useEffect(() => {
     const fetchRealStations = async () => {
       setIsFetchingReal(true);
       try {
-        // Fetch from OpenChargeMap using public endpoint for Thailand (TH)
-        const url = `https://api.openchargemap.io/v3/poi/?output=json&countrycode=TH&maxresults=300&client=pugev-clone`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("API request failed");
+        const query = `[out:json][timeout:30];node["amenity"="charging_station"](5.6,97.3,20.5,105.7);out body;`;
+        
+        // Use Vite proxy /overpass → rewrites to https://overpass-api.de/api
+        // This avoids CORS completely as the request goes server→server
+        const res = await fetch(`/overpass/interpreter?data=${encodeURIComponent(query)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         
         const data = await res.json();
+        console.log(`✅ Loaded ${data.elements?.length} EV stations from OSM`);
         
-        // Transform OCM data into our app's format
-        const mapped = data.map((poi) => {
-          let type = 'AC';
-          let power = 22;
-          
-          if (poi.Connections && poi.Connections.length > 0) {
-            // Check if any connection is DC Fast
-            const hasDC = poi.Connections.some(c => c.LevelID === 3 || (c.PowerKW && c.PowerKW > 22));
-            if (hasDC) type = 'DC Fast';
+        if (data.elements && data.elements.length > 0) {
+          const mapped = data.elements.map((node) => {
+            const tags = node.tags || {};
+            const name = tags['name:th'] || tags['name'] || tags['operator'] || tags['brand'] || 'สถานีชาร์จรถไฟฟ้า EV';
+            const network = tags['operator'] || tags['brand'] || tags['operator:th'] || 'เครือข่ายตู้ชาร์จสาธารณะ';
             
-            // Get max power
-            const maxPower = Math.max(...poi.Connections.map(c => c.PowerKW || 0));
-            if (maxPower > 0) power = maxPower;
-          }
+            let plugs = [];
+            const hasCCS = tags['socket:type2_combo'] || name.includes('PEA') || name.includes('PTT') || name.includes('EleXA') || name.includes('MG') || name.includes('Arun');
+            const hasType2 = tags['socket:type2'] || tags['socket:type2_combo'] || name.includes('EA Anywhere') || name.includes('Evolt') || name.includes('MEA');
+            const hasCHAdeMO = tags['socket:chademo'] || name.includes('PEA') || name.includes('PTT') || name.includes('Nissan');
 
-          return {
-            id: `real_${poi.ID}`,
-            name: poi.AddressInfo?.Title || 'สถานีชาร์จ (Real Data)',
-            lat: poi.AddressInfo?.Latitude,
-            lng: poi.AddressInfo?.Longitude,
-            plugs: [{ type: type, power: `${power}kW`, status: Math.random() > 0.4 ? 'available' : 'in_use' }],
-            status: Math.random() > 0.4 ? 'available' : 'in_use',
-            network: poi.OperatorInfo?.Title || 'Public Network',
-            openHours: '24/7',
-            address: poi.AddressInfo?.AddressLine1 || 'ไม่ระบุที่อยู่',
-          };
-        });
-        
-        setRealStations(mapped);
+            if (hasCCS) {
+              plugs.push({ id: `${node.id}_ccs1`, type: 'CCS2', power: '120 kW', category: 'DC Fast', status: Math.random() > 0.3 ? 'available' : 'in_use', statusTime: 'พร้อมใช้งาน' });
+              plugs.push({ id: `${node.id}_ccs2`, type: 'CCS2', power: '120 kW', category: 'DC Fast', status: Math.random() > 0.4 ? 'available' : 'in_use', statusTime: 'พร้อมใช้งาน' });
+            }
+            if (hasCHAdeMO) {
+              plugs.push({ id: `${node.id}_cha`, type: 'CHAdeMO', power: '50 kW', category: 'DC Fast', status: Math.random() > 0.5 ? 'available' : 'in_use', statusTime: 'พร้อมใช้งาน' });
+            }
+            if (hasType2 || plugs.length === 0) {
+              plugs.push({ id: `${node.id}_t2`, type: 'Type 2', power: '22 kW', category: 'AC Normal', status: 'available', statusTime: 'พร้อมใช้งาน' });
+            }
+
+            const hasAvailable = plugs.some(p => p.status === 'available');
+            return {
+              id: `osm_${node.id}`, name,
+              lat: node.lat, lng: node.lon,
+              plugs, status: hasAvailable ? 'available' : 'in_use',
+              network, openHours: tags['opening_hours'] || '24/7 เปิดบริการ',
+              address: tags['addr:full'] || tags['addr:street'] || tags['addr:province'] || `${name} ประเทศไทย`,
+            };
+          });
+          setRealStations(mapped);
+        } else {
+          throw new Error("No elements returned");
+        }
       } catch (err) {
-        console.error("Could not fetch real stations (API limit or CORS). Falling back to Mock.", err);
+        console.warn("⚠️ Using mock data:", err.message);
+        setRealStations(mockStations);
       } finally {
         setIsFetchingReal(false);
       }
     };
-    
     fetchRealStations();
   }, []);
 
-  // Simulate Real-time WebSocket Updates (Since OpenChargeMap doesn't provide live plug status)
+
+
+
+
+  // Simulate Real-time WebSocket Updates
   useEffect(() => {
     const interval = setInterval(() => {
       setRealStations(prev => prev.map(station => {
-        // 5% chance for a station to change its status every 5 seconds
         if (Math.random() < 0.05) {
           const newStatus = station.status === 'available' ? 'in_use' : 'available';
           return {
             ...station,
             status: newStatus,
-            plugs: [{ ...station.plugs[0], status: newStatus }],
+            plugs: station.plugs.map((p, idx) => idx === 0 ? { ...p, status: newStatus } : p),
             statusTime: `อัปเดตล่าสุด: ${new Date().toLocaleTimeString('th-TH')}`
           };
         }
         return station;
       }));
-    }, 5000); // Trigger every 5 seconds
+    }, 5000);
 
     return () => clearInterval(interval);
   }, []);
 
-  // Dynamically generate stations around the user's location
+  // Display real or mock stations
   const displayStations = React.useMemo(() => {
-    if (!userLocation) return [];
-
-    // Use real stations if available, else use mock
-    const sourceStations = realStations.length > 0 ? realStations : mockStations.map((station, index) => {
-      // Mock generation logic
-      const offsetLat = (Math.random() - 0.5) * 0.1;
-      const offsetLng = (Math.random() - 0.5) * 0.1;
-      return {
-        ...station,
-        id: `mock_${index}`,
-        lat: userLocation.lat + offsetLat,
-        lng: userLocation.lng + offsetLng,
-      };
-    });
-
-    return sourceStations;
-  }, [userLocation, realStations]);
+    if (realStations.length > 0) return realStations;
+    // While loading, show empty (spinner shown in UI)
+    return [];
+  }, [realStations]);
 
   useEffect(() => {
     // Get user location
@@ -211,7 +210,7 @@ function App() {
       mapInstance.Overlays.add(marker);
     });
 
-  }, [mapInstance, filteredStations, userLocation]);
+  }, [mapInstance, filteredStations, userLocation, isFetchingReal]);
 
   return (
     <div className="relative w-full h-screen bg-gray-100 flex flex-col font-sans overflow-hidden">
@@ -305,30 +304,82 @@ function App() {
               </div>
             </div>
 
-            <div className="bg-gray-50 rounded-xl p-4 mb-6">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Connectors</h3>
-              <div className="space-y-3">
-                {selectedStation.plugs.map((plug, idx) => (
-                  <div key={idx} className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center border border-gray-100">
-                        <Zap className={clsx("w-5 h-5", plug.status === 'available' ? "text-brand-primary" : "text-gray-400")} />
+            {/* Connectors Section (PugEV Style) */}
+            <div className="bg-gray-50/80 rounded-2xl p-4 mb-6 border border-gray-100 shadow-inner">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+                  <Zap className="w-4 h-4 text-brand-primary" />
+                  หัวชาร์จทั้งหมด
+                </h3>
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                  {selectedStation.plugs.filter(p => p.status === 'available').length}/{selectedStation.plugs.length} ว่าง
+                </span>
+              </div>
+
+              <div className="space-y-2.5">
+                {selectedStation.plugs.map((plug, idx) => {
+                  const isCCS = plug.type.includes('CCS');
+                  const isType2 = plug.type.includes('Type');
+                  const isCHAdeMO = plug.type.includes('CHAdeMO');
+
+                  let badgeBg = 'bg-gray-100 text-gray-700 border-gray-200';
+                  let iconColor = 'text-gray-500';
+                  let typeLabel = plug.type;
+                  let categoryLabel = plug.category || (isCCS || isCHAdeMO ? 'DC Fast' : 'AC Normal');
+
+                  if (isCCS) {
+                    badgeBg = 'bg-amber-50 text-amber-900 border-amber-200/60';
+                    iconColor = 'text-amber-500';
+                  } else if (isType2) {
+                    badgeBg = 'bg-sky-50 text-sky-900 border-sky-200/60';
+                    iconColor = 'text-sky-500';
+                  } else if (isCHAdeMO) {
+                    badgeBg = 'bg-purple-50 text-purple-900 border-purple-200/60';
+                    iconColor = 'text-purple-500';
+                  }
+
+                  return (
+                    <div 
+                      key={idx} 
+                      className={clsx(
+                        "flex justify-between items-center p-3 rounded-xl border transition shadow-sm",
+                        badgeBg
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center border border-gray-100 shrink-0">
+                          <Zap className={clsx("w-5 h-5 fill-current", iconColor)} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-extrabold text-gray-900 text-base leading-none">{typeLabel}</p>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/5 text-gray-600">
+                              {categoryLabel}
+                            </span>
+                          </div>
+                          <p className="text-xs font-semibold text-gray-500 mt-1">กำลังไฟสูงสุด: <span className="text-gray-800">{plug.power}</span></p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-gray-800">{plug.type}</p>
-                        <p className="text-xs text-gray-500">{plug.power}</p>
+
+                      <div className="text-right">
+                        <span className={clsx(
+                          "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold shadow-xs",
+                          plug.status === 'available' ? "bg-emerald-500 text-white" :
+                          plug.status === 'in_use' ? "bg-rose-500 text-white" : "bg-gray-400 text-white"
+                        )}>
+                          <span className={clsx(
+                            "w-1.5 h-1.5 rounded-full bg-white",
+                            plug.status === 'available' && "animate-ping"
+                          )} />
+                          {plug.status === 'available' ? 'ว่างพร้อมชาร์จ' : plug.status === 'in_use' ? 'มีรถชาร์จอยู่' : 'ปิดปรับปรุง'}
+                        </span>
+                        {plug.statusTime && (
+                          <p className="text-[10px] text-gray-400 mt-1">{plug.statusTime}</p>
+                        )}
                       </div>
                     </div>
-                    <span className={clsx(
-                      "px-3 py-1 rounded-full text-xs font-medium",
-                      plug.status === 'available' ? "bg-emerald-100 text-emerald-700" :
-                      plug.status === 'in_use' ? "bg-red-100 text-red-700" : "bg-gray-200 text-gray-700"
-                    )}>
-                      {plug.status === 'available' ? 'Available' : plug.status === 'in_use' ? 'In Use' : 'Offline'}
-                      {plug.statusTime && ` • ${plug.statusTime}`}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
