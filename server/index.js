@@ -6,6 +6,7 @@ import jwt from 'jsonwebtoken';
 import db from '../database/db.js';
 import overpassService from './services/overpassProxy.js';
 import routingAdapter from './services/routingAdapter.js';
+import { THAI_PROVINCES } from '../src/utils/thaiProvinces.js';
 import { verifyToken, requireRole, logAuditAction, JWT_SECRET } from './middleware/auth.js';
 import { globalLimiter, reportSubmissionLimiter, authLimiter } from './middleware/rateLimiter.js';
 import { validateBody, reportSchema, routeRequestSchema } from './middleware/validator.js';
@@ -178,8 +179,15 @@ app.get('/api/analytics', (req, res) => {
       });
     }
 
-    // Number of stations by province
-    const provinceDist = db.prepare('SELECT province, COUNT(*) as count FROM stations_cache GROUP BY province ORDER BY count DESC').all();
+    // Number of stations across all 77 Thai provinces (76 Provinces + Bangkok)
+    const dbProvCounts = db.prepare('SELECT province, COUNT(*) as count FROM stations_cache GROUP BY province').all();
+    const provCountMap = Object.fromEntries(dbProvCounts.map(item => [item.province, item.count]));
+    const provinceDist = THAI_PROVINCES.map(p => ({
+      province: p.name_th,
+      province_en: p.name_en,
+      region: p.region,
+      count: provCountMap[p.name_th] || 0
+    })).sort((a, b) => b.count - a.count);
 
     // Number of stations by provider
     const providerDist = db.prepare('SELECT provider, COUNT(*) as count FROM stations_cache GROUP BY provider ORDER BY count DESC').all();

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import db from '../../database/db.js';
+import { getProvinceFromElement } from '../../src/utils/thaiProvinces.js';
 
 // Helper for sleeping during exponential backoff
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -95,17 +96,7 @@ out center tags;
 
     // Address & Province parsing
     const address = tags['addr:full'] || tags['addr:street'] || tags['addr:place'] || tags['description'] || 'ไม่มีข้อมูลที่อยู่ (No address provided)';
-    let province = tags['addr:province'] || tags['addr:state'] || 'ไม่ระบุจังหวัด (Unspecified Province)';
-    if (address && !tags['addr:province']) {
-      // Basic detection for Bangkok or provinces in text if tag is missing
-      if (address.includes('กรุงเทพ') || address.includes('Bangkok')) province = 'กรุงเทพมหานคร';
-      else if (address.includes('เชียงใหม่') || address.includes('Chiang Mai')) province = 'เชียงใหม่';
-      else if (address.includes('ภูเก็ต') || address.includes('Phuket')) province = 'ภูเก็ต';
-      else if (address.includes('ชลบุรี') || address.includes('Chon Buri') || address.includes('พัทยา')) province = 'ชลบุรี';
-      else if (address.includes('ขอนแก่น')) province = 'ขอนแก่น';
-      else if (address.includes('ระยอง')) province = 'ระยอง';
-      else if (address.includes('นครราชสีมา') || address.includes('โคราช')) province = 'นครราชสีมา';
-    }
+    const province = getProvinceFromElement(tags, lat, lng, address);
 
     return {
       osm_id: uniqueId,

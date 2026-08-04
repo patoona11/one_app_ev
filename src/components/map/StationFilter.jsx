@@ -1,9 +1,11 @@
 import React from 'react';
 import { Filter, Zap, RotateCcw } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
+import { THAI_PROVINCES } from '../../utils/thaiProvinces';
 
 export default function StationFilter({ 
   selectedProvider, setSelectedProvider,
+  selectedProvince, setSelectedProvince,
   selectedConnector, setSelectedConnector,
   minPower, setMinPower,
   searchQuery, setSearchQuery,
@@ -29,6 +31,17 @@ export default function StationFilter({
     { value: 100, label: '≥ 100 kW (Ultra-Fast Charge)' }
   ];
 
+  // Group 77 provinces by Region
+  const regions = ['Central', 'North', 'Northeast', 'East', 'West', 'South'];
+  const regionNamesTh = {
+    Central: 'ภาคกลาง และ กทม.',
+    North: 'ภาคเหนือ',
+    Northeast: 'ภาคตะวันออกเฉียงเหนือ (อีสาน)',
+    East: 'ภาคตะวันออก',
+    West: 'ภาคตะวันตก',
+    South: 'ภาคใต้'
+  };
+
   return (
     <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-3.5 shadow-sm transition-colors z-20">
       <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
@@ -42,11 +55,29 @@ export default function StationFilter({
           {/* Search Box */}
           <input
             type="text"
-            placeholder={lang === 'th' ? '🔍 ค้นหาชื่อ, จังหวัด...' : '🔍 Search station, province...'}
+            placeholder={lang === 'th' ? '🔍 ค้นหาชื่อสถานี...' : '🔍 Search station name...'}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[170px]"
+            className="bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[150px]"
           />
+
+          {/* All 77 Provinces Filter */}
+          <select
+            value={selectedProvince || 'ALL'}
+            onChange={(e) => setSelectedProvince && setSelectedProvince(e.target.value)}
+            className="bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-200 border border-blue-300 dark:border-blue-800 rounded-xl px-3 py-1.5 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="ALL">🗺️ ครบ 77 จังหวัด (76 จังหวัด + กทม.)</option>
+            {regions.map((reg) => (
+              <optgroup key={reg} label={`--- ${regionNamesTh[reg]} ---`}>
+                {THAI_PROVINCES.filter(p => p.region === reg).map(p => (
+                  <option key={p.id} value={p.name_th}>
+                    📍 {p.name_th} ({p.name_en})
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
 
           {/* Provider Filter */}
           <select
@@ -83,7 +114,7 @@ export default function StationFilter({
           </select>
 
           {/* Reset Button */}
-          {(selectedProvider !== 'ALL' || selectedConnector !== 'ALL' || minPower !== 0 || searchQuery !== '') && (
+          {(selectedProvider !== 'ALL' || selectedProvince !== 'ALL' || selectedConnector !== 'ALL' || minPower !== 0 || searchQuery !== '') && (
             <button
               onClick={onReset}
               className="px-2.5 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-xl font-bold flex items-center gap-1 text-gray-700 dark:text-gray-200 transition-colors"
@@ -103,3 +134,4 @@ export default function StationFilter({
     </div>
   );
 }
+

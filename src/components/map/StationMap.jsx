@@ -4,18 +4,19 @@ import { useLanguage } from '../../context/LanguageContext';
 import StationFilter from './StationFilter';
 import StationDetailsModal from './StationDetailsModal';
 import Badge from '../common/Badge';
+import { THAI_PROVINCES } from '../../utils/thaiProvinces';
 
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
-// Helper for changing map view when station selected
-function SetViewOnClick({ coords }) {
+// Helper for changing map view when station or province selected
+function SetViewOnClick({ coords, zoom = 14 }) {
   const map = useMap();
   useEffect(() => {
     if (coords) {
-      map.setView(coords, 14, { animate: true });
+      map.setView(coords, zoom, { animate: true });
     }
-  }, [coords, map]);
+  }, [coords, zoom, map]);
   return null;
 }
 
@@ -49,11 +50,13 @@ export default function StationMap({ onOpenReport, user }) {
 
   // Filtering states
   const [selectedProvider, setSelectedProvider] = useState('ALL');
+  const [selectedProvince, setSelectedProvince] = useState('ALL');
   const [selectedConnector, setSelectedConnector] = useState('ALL');
   const [minPower, setMinPower] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStation, setSelectedStation] = useState(null);
   const [focusCoords, setFocusCoords] = useState(null);
+  const [focusZoom, setFocusZoom] = useState(14);
 
   const fetchStations = async (forceRefresh = false) => {
     setLoading(true);
@@ -89,6 +92,7 @@ export default function StationMap({ onOpenReport, user }) {
   // Filter stations logic
   const filteredStations = stations.filter(s => {
     if (selectedProvider !== 'ALL' && s.provider !== selectedProvider) return false;
+    if (selectedProvince !== 'ALL' && s.province !== selectedProvince) return false;
     
     if (selectedConnector !== 'ALL') {
       const hasConn = s.connectors?.some(c => c.type && c.type.toUpperCase().includes(selectedConnector.toUpperCase()));
@@ -110,11 +114,28 @@ export default function StationMap({ onOpenReport, user }) {
     return true;
   });
 
+  const handleProvinceChange = (provName) => {
+    setSelectedProvince(provName);
+    if (provName !== 'ALL') {
+      const prov = THAI_PROVINCES.find(p => p.name_th === provName);
+      if (prov) {
+        setFocusZoom(10);
+        setFocusCoords([prov.lat, prov.lng]);
+      }
+    } else {
+      setFocusZoom(6);
+      setFocusCoords([13.7563, 100.5018]);
+    }
+  };
+
   const handleResetFilters = () => {
     setSelectedProvider('ALL');
+    setSelectedProvince('ALL');
     setSelectedConnector('ALL');
     setMinPower(0);
     setSearchQuery('');
+    setFocusZoom(6);
+    setFocusCoords([13.7563, 100.5018]);
   };
 
   return (
@@ -123,6 +144,7 @@ export default function StationMap({ onOpenReport, user }) {
       {/* Filter Toolbar */}
       <StationFilter
         selectedProvider={selectedProvider} setSelectedProvider={setSelectedProvider}
+        selectedProvince={selectedProvince} setSelectedProvince={handleProvinceChange}
         selectedConnector={selectedConnector} setSelectedConnector={setSelectedConnector}
         minPower={minPower} setMinPower={setMinPower}
         searchQuery={searchQuery} setSearchQuery={setSearchQuery}
@@ -208,7 +230,7 @@ export default function StationMap({ onOpenReport, user }) {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors — Thailand EV Network'
           />
 
-          {focusCoords && <SetViewOnClick coords={focusCoords} />}
+          {focusCoords && <SetViewOnClick coords={focusCoords} zoom={focusZoom} />}
 
           {/* Render Filtered Station Markers */}
           {filteredStations.map((st) => (
@@ -219,6 +241,7 @@ export default function StationMap({ onOpenReport, user }) {
               eventHandlers={{
                 click: () => {
                   setSelectedStation(st);
+                  setFocusZoom(15);
                   setFocusCoords([st.lat, st.lng]);
                 }
               }}

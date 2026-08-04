@@ -122,10 +122,10 @@ export default function AnalyticsDashboard({ user, token }) {
             <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
               <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">จังหวัดที่มีตู้ชาร์จครอบคลุม</p>
               <h3 className="text-3xl font-black text-blue-600 dark:text-blue-400 mt-2 flex items-baseline gap-1">
-                <span>{data.province_distribution?.length || 0}</span>
-                <span className="text-xs text-gray-500 font-medium">จังหวัด (Provinces)</span>
+                <span>{data.province_distribution?.filter(p => p.count > 0).length || 0} / 77</span>
+                <span className="text-xs text-gray-500 font-medium">จังหวัดทั่วประเทศ</span>
               </h3>
-              <p className="text-xs text-gray-500 mt-3 truncate">สูงสุด: {data.province_distribution?.[0]?.province || 'กรุงเทพมหานคร'}</p>
+              <p className="text-xs text-gray-500 mt-3 truncate">สูงสุด: {data.province_distribution?.[0]?.province || 'กรุงเทพมหานคร'} (ครอบคลุมครบ 76 จังหวัด + กทม.)</p>
             </div>
 
             <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
@@ -159,7 +159,7 @@ export default function AnalyticsDashboard({ user, token }) {
               
               <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
                 {data.provider_distribution?.map((p, idx) => {
-                  const percentage = ((p.count / data.total_stations) * 100).toFixed(1);
+                  const percentage = ((p.count / (data.total_stations || 1)) * 100).toFixed(1);
                   return (
                     <div key={idx} className="space-y-1">
                       <div className="flex justify-between text-xs font-bold">
@@ -175,24 +175,27 @@ export default function AnalyticsDashboard({ user, token }) {
               </div>
             </div>
 
-            {/* Provinces Distribution */}
+            {/* Provinces Distribution (All 76 Provinces + Bangkok) */}
             <div className="lg:col-span-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-sm">
               <h3 className="font-extrabold text-base text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-3 mb-4 flex items-center justify-between">
-                <span>🗺️ การกระจายตัวตามจังหวัด (Provinces)</span>
-                <span className="text-xs font-medium text-gray-500">Top Locations</span>
+                <span>🗺️ ครอบคลุมครบ 77 จังหวัด (76 จังหวัด + กทม.)</span>
+                <span className="text-xs font-bold px-2 py-0.5 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded-lg">All 77 Provinces</span>
               </h3>
 
               <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
                 {data.province_distribution?.map((pv, idx) => {
-                  const percentage = ((pv.count / data.total_stations) * 100).toFixed(1);
+                  const percentage = ((pv.count / (data.total_stations || 1)) * 100).toFixed(1);
+                  const isZero = pv.count === 0;
                   return (
-                    <div key={idx} className="space-y-1">
+                    <div key={idx} className={`space-y-1 ${isZero ? 'opacity-60' : ''}`}>
                       <div className="flex justify-between text-xs font-bold">
-                        <span className="text-gray-800 dark:text-gray-200">{pv.province || 'Unspecified'}</span>
-                        <span className="text-blue-600 dark:text-blue-400">{pv.count} แห่ง ({percentage}%)</span>
+                        <span className="text-gray-800 dark:text-gray-200">{pv.province || 'Unspecified'} ({pv.region})</span>
+                        <span className={isZero ? 'text-gray-400 dark:text-gray-500' : 'text-blue-600 dark:text-blue-400'}>
+                          {isZero ? '0 แห่ง (รอซิงก์พิกัดจริง OSM)' : `${pv.count} แห่ง (${percentage}%)`}
+                        </span>
                       </div>
                       <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden">
-                        <div className="bg-blue-500 h-full rounded-full transition-all duration-500" style={{ width: `${Math.max(5, percentage)}%` }}></div>
+                        <div className={`h-full rounded-full transition-all duration-500 ${isZero ? 'bg-gray-300 dark:bg-gray-700 w-1' : 'bg-blue-500'}`} style={{ width: isZero ? '4px' : `${Math.max(5, percentage)}%` }}></div>
                       </div>
                     </div>
                   );
