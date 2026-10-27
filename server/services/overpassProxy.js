@@ -7,9 +7,9 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export class OverpassService {
   constructor() {
-    this.endpoints = (process.env.OVERPASS_ENDPOINTS || 'https://overpass.openstreetmap.fr/api,https://overpass-api.de/api,https://overpass.kumi.systems/api').split(',');
+    this.endpoints = (process.env.OVERPASS_ENDPOINTS || 'https://overpass.private.coffee/api,https://overpass-api.de/api,https://lz4.overpass-api.de/api').split(',');
     this.query = `
-[out:json][timeout:120];
+[out:json][timeout:60];
 area["ISO3166-1"="TH"][admin_level=2]->.th;
 (
   node["amenity"="charging_station"](area.th);
@@ -133,7 +133,7 @@ out center tags;
           timeout: 45000
         });
 
-        if (response.status === 200 && response.data?.elements) {
+        if (response.status === 200 && Array.isArray(response.data?.elements) && response.data.elements.length > 0) {
           const elements = response.data.elements;
           const deduplicateMap = new Map();
 
@@ -156,6 +156,8 @@ out center tags;
             isCached: false,
             lastUpdated: new Date().toISOString()
           };
+        } else {
+          throw new Error(`Endpoint ${endpoint} returned non-array or 0 elements.`);
         }
       } catch (err) {
         console.warn(`⚠️ [OverpassProxy] Failed on ${endpoint}: ${err.message}`);
